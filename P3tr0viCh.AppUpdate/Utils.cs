@@ -6,8 +6,7 @@ namespace P3tr0viCh.AppUpdate
 {
     internal class Utils
     {
-        public const string DownloadedDirName = "downloaded";
-        public const string LatestDirName = "latest";
+        private const string DownloadDirName = "download";
 
         public static void DirectoryCreate(string path)
         {
@@ -39,7 +38,11 @@ namespace P3tr0viCh.AppUpdate
 
         public static string GetProgramRoot(string fileName)
         {
-            return Path.GetDirectoryName(Path.GetDirectoryName(fileName));
+            var programRoot = Path.GetDirectoryName(Path.GetDirectoryName(fileName));
+
+            DebugWrite.Line($"ProgramRoot: {programRoot}");
+
+            return programRoot;
         }
 
         public static string GetParentName(string fileName)
@@ -47,41 +50,42 @@ namespace P3tr0viCh.AppUpdate
             return Path.GetFileName(Path.GetDirectoryName(fileName));
         }
 
-        public static string GetDownloaded(string fileName, string programRoot)
+        public static string GetDownload(string programRoot)
         {
-            if (programRoot.IsEmpty())
-            {
-                programRoot = Path.GetDirectoryName(Path.GetDirectoryName(fileName));
-            }
+            var downloadDir = Path.Combine(programRoot, DownloadDirName);
 
-            var downloadedDir = Path.Combine(programRoot, DownloadedDirName);
+            DebugWrite.Line($"DownloadDir: {downloadDir}");
 
-            return downloadedDir;
+            return downloadDir;
         }
 
-        public static string CreateDownloaded(string fileName, string programRoot)
+        public static string CreateDownload(string programRoot)
         {
-            var downloadedDir = GetDownloaded(fileName, programRoot);
+            var downloadDir = GetDownload(programRoot);
 
-            DirectoryDelete(downloadedDir);
+            DirectoryDelete(downloadDir);
 
-            DirectoryCreate(downloadedDir);
+            DirectoryCreate(downloadDir);
 
-            return downloadedDir;
+            return downloadDir;
         }
 
-        public static string CreateMoveDir(string downloadedDir, string fileName)
+        public static string CreateMoveDir(string downloadDir, string fileName)
         {
-            var moveDir = downloadedDir;
+            DebugWrite.Line($"DownloadDir: {downloadDir}"); 
+            
+            var moveDir = downloadDir;
 
             var fileNameOnly = Path.GetFileName(fileName);
 
-            if (File.Exists(Path.Combine(downloadedDir, fileNameOnly)))
+            if (File.Exists(Path.Combine(downloadDir, fileNameOnly)))
             {
+                DebugWrite.Line($"MoveDir: {moveDir}");
+
                 return moveDir;
             }
 
-            foreach (var directory in Directory.EnumerateDirectories(downloadedDir))
+            foreach (var directory in Directory.EnumerateDirectories(downloadDir))
             {
                 if (File.Exists(Path.Combine(directory, fileNameOnly)))
                 {
@@ -94,33 +98,20 @@ namespace P3tr0viCh.AppUpdate
             throw new FileNotExistsInArchiveException();
         }
 
-        public static string CreateLatest(string programRoot, string fileName)
+        public static string CreateVersion(string programRoot, string fileName)
         {
-            var latestDir = Path.Combine(programRoot, LatestDirName);
+            var version = Misc.GetFileVersion(fileName);
 
-            string versionName;
+            var versionName = version.ToString();
 
-            if (File.Exists(fileName))
+            var versionDir = Path.Combine(programRoot, versionName);
+
+            if (Directory.Exists(versionDir))
             {
-                var version = Misc.GetFileVersion(fileName);
-
-                versionName = version.ToString();
-
-                var versionDir = Path.Combine(programRoot, versionName);
-
-                if (Directory.Exists(versionDir))
-                {
-                    versionName += "_" + DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-                }
-
-            } else
-            {
-                versionName = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+                versionDir += "_" + DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
             }
 
-            DirectoryRename(latestDir, versionName);
-
-            return latestDir;
+            return versionDir;
         }
     }
 }

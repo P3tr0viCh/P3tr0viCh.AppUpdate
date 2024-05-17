@@ -22,14 +22,16 @@ namespace P3tr0viCh.AppUpdate
         private const string MediaTypeTags = "application/vnd.github+json";
         private const string MediaTypeDownload = "application/vnd.github.raw+json";
 
-        [DisplayName("Владелец")]
+        [LocalizedAttribute.DisplayName("GitHub.Owner.DisplayName", "Properties.Resources.AppUpdate")]
+        [LocalizedAttribute.Description("GitHub.Owner.Description", "Properties.Resources.AppUpdate")]
         public string Owner { get; set; } = string.Empty;
 
-        [DisplayName("Репозиторий")]
+        [LocalizedAttribute.DisplayName("GitHub.Repo.DisplayName", "Properties.Resources.AppUpdate")]
+        [LocalizedAttribute.Description("GitHub.Repo.Description", "Properties.Resources.AppUpdate")]
         public string Repo { get; set; } = string.Empty;
 
-        [DisplayName("Архив с обновлением")]
-        [Description("")]
+        [LocalizedAttribute.DisplayName("GitHub.ArchiveFile.DisplayName", "Properties.Resources.AppUpdate")]
+        [LocalizedAttribute.Description("GitHub.ArchiveFile.Description", "Properties.Resources.AppUpdate")]
         public string ArchiveFile { get; set; } = string.Empty;
 
         internal class Tags

@@ -2,9 +2,9 @@
 using P3tr0viCh.Utils;
 using System;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Drawing.Design;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms.Design;
 using static P3tr0viCh.Utils.Converters;
@@ -13,6 +13,8 @@ namespace P3tr0viCh.AppUpdate
 {
     public partial class AppUpdate
     {
+        public const string ParentDirNamePattern = @"\d\.\d\.\d\.\d";
+
         public const string DefaultArchiveFile = "latest.zip";
 
         public class Config
@@ -30,19 +32,15 @@ namespace P3tr0viCh.AppUpdate
 
             private string latestVersionStr = string.Empty;
 
-            [Category("Общее")]
-            [DisplayName("Программа")]
-            [Description("Расположение исполняемого файла.\n" +
-               "Файл (и все остальные компоненты обновляемой программы) должен находиться в каталоге «latest», " +
-               "который располагается в каталоге обновляемой программы.\n" +
-               "Например:\n" +
-               "c:\\Program Files\\Updater\\latest\\Updater.exe")]
+            [LocalizedAttribute.Category("Category.Common", "Properties.Resources.AppUpdate")]
+            [LocalizedAttribute.DisplayName("Config.LocalFile.DisplayName", "Properties.Resources.AppUpdate")]
+            [LocalizedAttribute.Description("Config.LocalFile.Description", "Properties.Resources.AppUpdate")]
             [Editor(typeof(FileNameEditor), typeof(UITypeEditor))]
             public string LocalFile { get; set; }
 
-            [Category("Расположение обновления")]
-            [DisplayName("ГитХаб")]
-            [Description("")]
+            [LocalizedAttribute.Category("Category.UpdateLocation", "Properties.Resources.AppUpdate")]
+            [LocalizedAttribute.DisplayName("Config.GitHub.DisplayName", "Properties.Resources.AppUpdate")]
+            [LocalizedAttribute.Description("Config.GitHub.Description", "Properties.Resources.AppUpdate")]
             [TypeConverter(typeof(ExpandableObjectEmptyConverter))]
             public GitHub GitHub { get; } = new GitHub();
 
@@ -80,14 +78,20 @@ namespace P3tr0viCh.AppUpdate
 
                     if (!File.Exists(LocalFile)) throw new LocalFileNotFoundException();
 
+                    if (string.Compare(Path.GetExtension(LocalFile), ".exe", true) != 0) throw new LocalFileBadFormatException();
+
+                    CheckLocalVersion();
+
                     var parentDirName = Utils.GetParentName(LocalFile);
 
-                    if (parentDirName != Utils.LatestDirName) throw new LocalFileWrongLocationException();
+                    if (!Regex.IsMatch(parentDirName, ParentDirNamePattern)) throw new LocalFileWrongLocationException();
                 }
                 finally
                 {
                     Status.Stop(status);
                 }
+
+                DebugWrite.Line("done");
             }
 
             public void CheckLocalVersion()
@@ -100,12 +104,13 @@ namespace P3tr0viCh.AppUpdate
 
                 try
                 {
-                    if (File.Exists(LocalFile))
-                    {
-                        var info = FileVersionInfo.GetVersionInfo(LocalFile);
+                    localVersion = Misc.GetFileVersion(LocalFile);
+                }
+                catch (Exception e)
+                {
+                    DebugWrite.Error(e);
 
-                        localVersion = Misc.GetFileVersion(info);
-                    }
+                    throw new LocalFileBadFormatException();
                 }
                 finally
                 {
@@ -141,13 +146,6 @@ namespace P3tr0viCh.AppUpdate
                 DebugWrite.Line("done");
             }
 
-            public async Task CheckVersionsAsync()
-            {
-                Check();
-                CheckLocalVersion();
-                await CheckLatestVersionAsync();
-            }
-
             private async Task ArchiveExtractAsync(string archiveFileName, string destinationDir)
             {
                 DebugWrite.Line("start");
@@ -178,15 +176,15 @@ namespace P3tr0viCh.AppUpdate
 
                     var programRoot = Utils.GetProgramRoot(LocalFile);
 
-                    var downloadedDir = Utils.GetDownloaded(LocalFile, programRoot);
+                    var downloadDir = Utils.GetDownload(programRoot);
 
-                    var moveDir = Utils.CreateMoveDir(downloadedDir, LocalFile);
+                    var moveDir = Utils.CreateMoveDir(downloadDir, LocalFile);
 
-                    var latestDir = Utils.CreateLatest(programRoot, LocalFile);
+                    var verisonDir = Utils.CreateVersion(programRoot, LocalFile);
 
-                    Utils.DirectoryMove(moveDir, latestDir);
+                    Utils.DirectoryMove(moveDir, verisonDir);
 
-                    Utils.DirectoryDelete(downloadedDir);
+                    Utils.DirectoryDelete(downloadDir);
                 }
                 finally
                 {
@@ -206,13 +204,15 @@ namespace P3tr0viCh.AppUpdate
                 {
                     Check();
 
-                    var downloadedDir = Utils.CreateDownloaded(LocalFile, string.Empty);
+                    var programRoot = Utils.GetProgramRoot(LocalFile);
 
-                    var archiveFileName = Path.Combine(downloadedDir, GitHub.ArchiveFile);
+                    var downloadDir = Utils.CreateDownload(programRoot);
+
+                    var archiveFileName = Path.Combine(downloadDir, GitHub.ArchiveFile);
 
                     await GitHub.DownloadAsync(latestVersionStr, GitHub.ArchiveFile, archiveFileName);
 
-                    await ArchiveExtractAsync(archiveFileName, downloadedDir);
+                    await ArchiveExtractAsync(archiveFileName, downloadDir);
 
                     File.Delete(archiveFileName);
                 }

@@ -5,6 +5,8 @@ namespace P3tr0viCh.AppUpdate
 {
     public class LocalFileNotFoundException : FileNotFoundException { }
 
+    public class LocalFileBadFormatException : FileNotFoundException { }
+
     public class LocalFileWrongLocationException : FileNotFoundException { }
 
     public class FileNotExistsInArchiveException : FileNotFoundException { }
