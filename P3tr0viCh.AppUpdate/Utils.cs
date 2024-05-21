@@ -50,7 +50,7 @@ namespace P3tr0viCh.AppUpdate
             return Path.GetFileName(Path.GetDirectoryName(fileName));
         }
 
-        public static string GetDownload(string programRoot)
+        public static string GetDownloadDir(string programRoot)
         {
             var downloadDir = Path.Combine(programRoot, DownloadDirName);
 
@@ -59,9 +59,9 @@ namespace P3tr0viCh.AppUpdate
             return downloadDir;
         }
 
-        public static string CreateDownload(string programRoot)
+        public static string CreateDownloadDir(string programRoot)
         {
-            var downloadDir = GetDownload(programRoot);
+            var downloadDir = GetDownloadDir(programRoot);
 
             DirectoryDelete(downloadDir);
 
@@ -70,13 +70,11 @@ namespace P3tr0viCh.AppUpdate
             return downloadDir;
         }
 
-        public static string CreateMoveDir(string downloadDir, string fileName)
+        public static string GetMoveDir(string downloadDir, string fileNameOnly)
         {
             DebugWrite.Line($"DownloadDir: {downloadDir}"); 
             
             var moveDir = downloadDir;
-
-            var fileNameOnly = Path.GetFileName(fileName);
 
             if (File.Exists(Path.Combine(downloadDir, fileNameOnly)))
             {
@@ -98,9 +96,9 @@ namespace P3tr0viCh.AppUpdate
             throw new FileNotExistsInArchiveException();
         }
 
-        public static string CreateVersion(string programRoot, string fileName)
+        public static string GetVersionDir(string programRoot, string moveDir, string fileNameOnly)
         {
-            var version = Misc.GetFileVersion(fileName);
+            var version = Misc.GetFileVersion(Path.Combine(moveDir, fileNameOnly));
 
             var versionName = version.ToString();
 

@@ -13,7 +13,7 @@ namespace P3tr0viCh.AppUpdate
 {
     public partial class AppUpdate
     {
-        public const string ParentDirNamePattern = @"\d\.\d\.\d\.\d";
+        public const string ParentDirNamePattern = @"\d+\.\d+\.\d+\.\d+";
 
         public const string DefaultArchiveFile = "latest.zip";
 
@@ -105,6 +105,8 @@ namespace P3tr0viCh.AppUpdate
                 try
                 {
                     localVersion = Misc.GetFileVersion(LocalFile);
+
+                    DebugWrite.Line(localVersion.ToString());
                 }
                 catch (Exception e)
                 {
@@ -137,6 +139,8 @@ namespace P3tr0viCh.AppUpdate
                     latestVersion = new Version(tempVersion.Major, tempVersion.Minor,
                         tempVersion.Build == -1 ? 0 : tempVersion.Build,
                         tempVersion.Revision == -1 ? 0 : tempVersion.Revision);
+
+                    DebugWrite.Line(latestVersion.ToString());
                 }
                 finally
                 {
@@ -176,13 +180,15 @@ namespace P3tr0viCh.AppUpdate
 
                     var programRoot = Utils.GetProgramRoot(LocalFile);
 
-                    var downloadDir = Utils.GetDownload(programRoot);
+                    var downloadDir = Utils.GetDownloadDir(programRoot);
+                    
+                    var fileNameOnly = Path.GetFileName(LocalFile);
 
-                    var moveDir = Utils.CreateMoveDir(downloadDir, LocalFile);
+                    var moveDir = Utils.GetMoveDir(downloadDir, fileNameOnly);
 
-                    var verisonDir = Utils.CreateVersion(programRoot, LocalFile);
+                    var versionDir = Utils.GetVersionDir(programRoot, moveDir, fileNameOnly);
 
-                    Utils.DirectoryMove(moveDir, verisonDir);
+                    Utils.DirectoryMove(moveDir, versionDir);
 
                     Utils.DirectoryDelete(downloadDir);
                 }
@@ -206,7 +212,7 @@ namespace P3tr0viCh.AppUpdate
 
                     var programRoot = Utils.GetProgramRoot(LocalFile);
 
-                    var downloadDir = Utils.CreateDownload(programRoot);
+                    var downloadDir = Utils.CreateDownloadDir(programRoot);
 
                     var archiveFileName = Path.Combine(downloadDir, GitHub.ArchiveFile);
 
