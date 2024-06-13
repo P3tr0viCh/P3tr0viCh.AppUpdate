@@ -53,11 +53,19 @@
   <ItemGroup>
     <Compile Include="AppUpdate.cs" />
     <Compile Include="Archive.cs" />
+    <Compile Include="Config.cs" />
     <Compile Include="Exceptions.cs" />
+    <Compile Include="Folder.Config.cs" />
+    <Compile Include="Folder.cs" />
+    <Compile Include="GitHub.Config.cs" />
     <Compile Include="GitHub.cs" />
+    <Compile Include="IUpdater.cs" />
+    <Compile Include="Location.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Status.cs" />
+    <Compile Include="UpdaterFactory.cs" />
+    <Compile Include="UpdateStatus.cs" />
     <Compile Include="Utils.cs" />
+    <Compile Include="Versions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -1,16 +1,15 @@
-﻿using System.Collections.Generic;
-using System.ComponentModel;
-using System.IO;
-using System.Net.Http;
-using System.Net;
-using System.Threading.Tasks;
-using System;
+﻿using Newtonsoft.Json;
 using P3tr0viCh.Utils;
-using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace P3tr0viCh.AppUpdate
 {
-    public class GitHub
+    public partial class GitHub : IUpdater
     {
         private const string Url = "https://github.com";
         private const string UrlApi = "https://api.github.com";
@@ -22,30 +21,25 @@ namespace P3tr0viCh.AppUpdate
         private const string MediaTypeTags = "application/vnd.github+json";
         private const string MediaTypeDownload = "application/vnd.github.raw+json";
 
-        [LocalizedAttribute.DisplayName("GitHub.Owner.DisplayName", "Properties.Resources.AppUpdate")]
-        [LocalizedAttribute.Description("GitHub.Owner.Description", "Properties.Resources.AppUpdate")]
-        public string Owner { get; set; } = string.Empty;
+        private readonly Config config;
 
-        [LocalizedAttribute.DisplayName("GitHub.Repo.DisplayName", "Properties.Resources.AppUpdate")]
-        [LocalizedAttribute.Description("GitHub.Repo.Description", "Properties.Resources.AppUpdate")]
-        public string Repo { get; set; } = string.Empty;
-
-        [LocalizedAttribute.DisplayName("GitHub.ArchiveFile.DisplayName", "Properties.Resources.AppUpdate")]
-        [LocalizedAttribute.Description("GitHub.ArchiveFile.Description", "Properties.Resources.AppUpdate")]
-        public string ArchiveFile { get; set; } = string.Empty;
+        public GitHub(Config config)
+        {
+            this.config = config;
+        }
 
         internal class Tags
         {
             public string name = string.Empty;
         }
 
-        internal Uri GetLatestRelease()
+        public Uri GetLatestRelease()
         {
             var baseUri = new Uri(Url);
-            return new Uri(baseUri, string.Format(UrlLatestRelease, Owner, Repo));
+            return new Uri(baseUri, string.Format(UrlLatestRelease, config.Owner, config.Repo));
         }
 
-        internal async Task<string> GetLatestVersionAsync()
+        private async Task<string> GetLatestVersionTagAsync()
         {
             using (var client = new HttpClient(new HttpClientHandler
             {
@@ -56,7 +50,7 @@ namespace P3tr0viCh.AppUpdate
                 Http.SetClientHeader(client);
                 Http.SetClientMediaType(client, MediaTypeTags);
 
-                var requestUri = string.Format(UrlTags, Owner, Repo);
+                var requestUri = string.Format(UrlTags, config.Owner, config.Repo);
 
                 var response = await client.GetAsync(requestUri);
 
@@ -75,12 +69,24 @@ namespace P3tr0viCh.AppUpdate
             }
         }
 
-        internal async Task DownloadAsync(string version,
-            string fileName, string downloadFileName)
+        public async Task<Version> GetLatestVersionAsync()
         {
+            var latestTag = await GetLatestVersionTagAsync();
+
+            var tempVersion = new Version(latestTag);
+
+            return new Version(tempVersion.Major, tempVersion.Minor,
+                tempVersion.Build == -1 ? 0 : tempVersion.Build,
+                tempVersion.Revision == -1 ? 0 : tempVersion.Revision);
+        }
+
+        internal async Task DownloadAsync(string version, string downloadFileName)
+        {
+            var fileName = config.ArchiveFile;
+
             if (fileName.IsEmpty()) fileName = AppUpdate.DefaultArchiveFile;
 
-            var downloadUri = string.Format(UrlDownloadFile, Owner, Repo, version, fileName);
+            var downloadUri = string.Format(UrlDownloadFile, config.Owner, config.Repo, version, fileName);
 
             DebugWrite.Line($"{downloadUri} > {downloadFileName}");
 

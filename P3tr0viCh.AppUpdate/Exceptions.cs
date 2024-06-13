@@ -12,4 +12,6 @@ namespace P3tr0viCh.AppUpdate
     public class FileNotExistsInArchiveException : FileNotFoundException { }
 
     public class GitHubEmptyTagsException : Exception { }
+
+    public class VersionFileNotFoundException : FileNotFoundException { }
 }

@@ -1,234 +1,207 @@
-﻿using Newtonsoft.Json;
-using P3tr0viCh.Utils;
+﻿using P3tr0viCh.Utils;
 using System;
-using System.ComponentModel;
-using System.Drawing.Design;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Windows.Forms.Design;
-using static P3tr0viCh.Utils.Converters;
 
 namespace P3tr0viCh.AppUpdate
 {
-    public partial class AppUpdate
+    public class AppUpdate
     {
         public const string ParentDirNamePattern = @"\d+\.\d+\.\d+\.\d+";
 
         public const string DefaultArchiveFile = "latest.zip";
+        
+        public const string DefaultVersionFile = "version";
 
-        public class Config
+        public ProgramStatus Status { get; } = new ProgramStatus();
+
+        public Versions Versions { get; } = new Versions();
+
+        public Config Config { get; set; } = new Config();
+
+        public Uri GetLatestRelease()
         {
-            private Version localVersion = null;
+            var updater = UpdaterFactory.GetUpdater(Config);
 
-            [JsonIgnore]
-            [Browsable(false)]
-            public Version LocalVersion => localVersion;
+            return updater.GetLatestRelease();
+        }
 
-            private Version latestVersion = null;
-            [JsonIgnore]
-            [Browsable(false)]
-            public Version LatestVersion => latestVersion;
+        public void Check()
+        {
+            DebugWrite.Line("start");
 
-            private string latestVersionStr = string.Empty;
+            var status = Status.Start(UpdateStatus.Check);
 
-            [LocalizedAttribute.Category("Category.Common", "Properties.Resources.AppUpdate")]
-            [LocalizedAttribute.DisplayName("Config.LocalFile.DisplayName", "Properties.Resources.AppUpdate")]
-            [LocalizedAttribute.Description("Config.LocalFile.Description", "Properties.Resources.AppUpdate")]
-            [Editor(typeof(FileNameEditor), typeof(UITypeEditor))]
-            public string LocalFile { get; set; }
-
-            [LocalizedAttribute.Category("Category.UpdateLocation", "Properties.Resources.AppUpdate")]
-            [LocalizedAttribute.DisplayName("Config.GitHub.DisplayName", "Properties.Resources.AppUpdate")]
-            [LocalizedAttribute.Description("Config.GitHub.Description", "Properties.Resources.AppUpdate")]
-            [TypeConverter(typeof(ExpandableObjectEmptyConverter))]
-            public GitHub GitHub { get; } = new GitHub();
-
-            private readonly ProgramStatus status = new ProgramStatus();
-            [JsonIgnore]
-            [Browsable(false)]
-            public ProgramStatus Status => status;
-
-            public Uri GetLatestRelease()
+            try
             {
-                return GitHub.GetLatestRelease();
+                if (Config.LocalFile.IsEmpty()) throw new NullReferenceException("local file is empty");
+
+                switch (Config.Location)
+                {
+                    case Location.GitHub:
+                        if (Config.GitHub is null ||
+                            Config.GitHub.Owner.IsEmpty() ||
+                            Config.GitHub.Repo.IsEmpty()) throw new NullReferenceException("config.github is empty");
+                        break;
+                    case Location.Folder:
+                        if (Config.Folder is null ||
+                            Config.Folder.Path.IsEmpty()) throw new NullReferenceException("config.folder is empty");
+                        break;
+                }
+
+                if (!File.Exists(Config.LocalFile)) throw new LocalFileNotFoundException();
+
+                if (string.Compare(Path.GetExtension(Config.LocalFile), ".exe", true) != 0) throw new LocalFileBadFormatException();
+
+                CheckLocalVersion();
+
+                var parentDirName = Utils.GetParentName(Config.LocalFile);
+
+                if (!Regex.IsMatch(parentDirName, ParentDirNamePattern)) throw new LocalFileWrongLocationException();
+            }
+            finally
+            {
+                Status.Stop(status);
             }
 
-            public int CompareVersions()
+            DebugWrite.Line("done");
+        }
+
+        public void CheckLocalVersion()
+        {
+            DebugWrite.Line("start");
+
+            var status = Status.Start(UpdateStatus.CheckLocal);
+
+            Versions.Local = null;
+
+            try
             {
-                return LatestVersion.CompareTo(localVersion);
+                Versions.Local = Misc.GetFileVersion(Config.LocalFile);
+
+                DebugWrite.Line(Versions.Local.ToString());
+            }
+            catch (Exception e)
+            {
+                DebugWrite.Error(e);
+
+                throw new LocalFileBadFormatException();
+            }
+            finally
+            {
+                Status.Stop(status);
             }
 
-            public bool IsLatestVersion()
+            DebugWrite.Line("done");
+        }
+
+        public async Task CheckLatestVersionAsync()
+        {
+            DebugWrite.Line("start");
+
+            var status = Status.Start(UpdateStatus.CheckLatest);
+
+            Versions.Latest = null;
+
+            try
             {
-                return CompareVersions() != 1;
+                var updater = UpdaterFactory.GetUpdater(Config);
+
+                Versions.Latest = await updater.GetLatestVersionAsync();
+
+                DebugWrite.Line(Versions.Latest.ToString());
+            }
+            finally
+            {
+                Status.Stop(status);
             }
 
-            public void Check()
+            DebugWrite.Line("done");
+        }
+
+        private async Task ArchiveExtractAsync(string archiveFileName, string destinationDir)
+        {
+            DebugWrite.Line("start");
+
+            var status = Status.Start(UpdateStatus.ArchiveExtract);
+
+            try
             {
-                DebugWrite.Line("start");
-
-                var status = Status.Start(AppUpdate.Status.Check);
-
-                try
-                {
-                    if (LocalFile.IsEmpty() ||
-                        GitHub is null ||
-                        GitHub.Owner.IsEmpty()) throw new NullReferenceException();
-
-                    if (!File.Exists(LocalFile)) throw new LocalFileNotFoundException();
-
-                    if (string.Compare(Path.GetExtension(LocalFile), ".exe", true) != 0) throw new LocalFileBadFormatException();
-
-                    CheckLocalVersion();
-
-                    var parentDirName = Utils.GetParentName(LocalFile);
-
-                    if (!Regex.IsMatch(parentDirName, ParentDirNamePattern)) throw new LocalFileWrongLocationException();
-                }
-                finally
-                {
-                    Status.Stop(status);
-                }
-
-                DebugWrite.Line("done");
+                await Archive.ZipExtractAsync(archiveFileName, destinationDir);
+            }
+            finally
+            {
+                Status.Stop(status);
             }
 
-            public void CheckLocalVersion()
+            DebugWrite.Line("done");
+        }
+
+        public async Task UpdateAsync()
+        {
+            DebugWrite.Line("start");
+
+            var status = Status.Start(UpdateStatus.Update);
+
+            try
             {
-                DebugWrite.Line("start");
+                await DownloadAsync();
 
-                var status = Status.Start(AppUpdate.Status.CheckLocal);
+                var programRoot = Utils.GetProgramRoot(Config.LocalFile);
 
-                localVersion = null;
+                var downloadDir = Utils.GetDownloadDir(programRoot);
 
-                try
-                {
-                    localVersion = Misc.GetFileVersion(LocalFile);
+                var archiveFileName = Path.Combine(downloadDir, Config.GitHub.ArchiveFile);
 
-                    DebugWrite.Line(localVersion.ToString());
-                }
-                catch (Exception e)
-                {
-                    DebugWrite.Error(e);
+                await ArchiveExtractAsync(archiveFileName, downloadDir);
 
-                    throw new LocalFileBadFormatException();
-                }
-                finally
-                {
-                    Status.Stop(status);
-                }
+                File.Delete(archiveFileName);
 
-                DebugWrite.Line("done");
+                var fileNameOnly = Path.GetFileName(Config.LocalFile);
+
+                var moveDir = Utils.GetMoveDir(downloadDir, fileNameOnly);
+
+                var versionDir = Utils.GetVersionDir(programRoot, moveDir, fileNameOnly);
+
+                Utils.DirectoryMove(moveDir, versionDir);
+
+                Utils.DirectoryDelete(downloadDir);
+            }
+            finally
+            {
+                Status.Stop(status);
             }
 
-            public async Task CheckLatestVersionAsync()
+            DebugWrite.Line("done");
+        }
+
+        public async Task DownloadAsync()
+        {
+            DebugWrite.Line("start");
+
+            var status = Status.Start(UpdateStatus.Download);
+
+            try
             {
-                DebugWrite.Line("start");
+                Check();
 
-                var status = Status.Start(AppUpdate.Status.CheckLatest);
+                var programRoot = Utils.GetProgramRoot(Config.LocalFile);
 
-                latestVersion = null;
+                var downloadDir = Utils.CreateDownloadDir(programRoot);
 
-                try
-                {
-                    latestVersionStr = await GitHub.GetLatestVersionAsync();
+                var archiveFileName = Path.Combine(downloadDir, Config.GitHub.ArchiveFile);
 
-                    var tempVersion = new Version(latestVersionStr);
+                var gitHub = new GitHub(Config.GitHub);
 
-                    latestVersion = new Version(tempVersion.Major, tempVersion.Minor,
-                        tempVersion.Build == -1 ? 0 : tempVersion.Build,
-                        tempVersion.Revision == -1 ? 0 : tempVersion.Revision);
-
-                    DebugWrite.Line(latestVersion.ToString());
-                }
-                finally
-                {
-                    Status.Stop(status);
-                }
-
-                DebugWrite.Line("done");
+                await gitHub.DownloadAsync(Versions.latestStr, archiveFileName);
+            }
+            finally
+            {
+                Status.Stop(status);
             }
 
-            private async Task ArchiveExtractAsync(string archiveFileName, string destinationDir)
-            {
-                DebugWrite.Line("start");
-
-                var status = Status.Start(AppUpdate.Status.ArchiveExtract);
-
-                try
-                {
-                    await Archive.ZipExtractAsync(archiveFileName, destinationDir);
-                }
-                finally
-                {
-                    Status.Stop(status);
-                }
-
-                DebugWrite.Line("done");
-            }
-
-            public async Task UpdateAsync()
-            {
-                DebugWrite.Line("start");
-
-                var status = Status.Start(AppUpdate.Status.Update);
-
-                try
-                {
-                    await DownloadAsync();
-
-                    var programRoot = Utils.GetProgramRoot(LocalFile);
-
-                    var downloadDir = Utils.GetDownloadDir(programRoot);
-                    
-                    var fileNameOnly = Path.GetFileName(LocalFile);
-
-                    var moveDir = Utils.GetMoveDir(downloadDir, fileNameOnly);
-
-                    var versionDir = Utils.GetVersionDir(programRoot, moveDir, fileNameOnly);
-
-                    Utils.DirectoryMove(moveDir, versionDir);
-
-                    Utils.DirectoryDelete(downloadDir);
-                }
-                finally
-                {
-                    Status.Stop(status);
-                }
-
-                DebugWrite.Line("done");
-            }
-
-            public async Task DownloadAsync()
-            {
-                DebugWrite.Line("start");
-
-                var status = Status.Start(AppUpdate.Status.Download);
-
-                try
-                {
-                    Check();
-
-                    var programRoot = Utils.GetProgramRoot(LocalFile);
-
-                    var downloadDir = Utils.CreateDownloadDir(programRoot);
-
-                    var archiveFileName = Path.Combine(downloadDir, GitHub.ArchiveFile);
-
-                    await GitHub.DownloadAsync(latestVersionStr, GitHub.ArchiveFile, archiveFileName);
-
-                    await ArchiveExtractAsync(archiveFileName, downloadDir);
-
-                    File.Delete(archiveFileName);
-                }
-                finally
-                {
-                    Status.Stop(status);
-                }
-
-                DebugWrite.Line("done");
-            }
+            DebugWrite.Line("done");
         }
     }
 }
