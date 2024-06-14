@@ -15,13 +15,6 @@ namespace P3tr0viCh.AppUpdate
             Directory.CreateDirectory(path);
         }
 
-        public static void DirectoryRename(string sourceDirFullName, string destDirOnlyName)
-        {
-            DebugWrite.Line($"{sourceDirFullName} > {destDirOnlyName}");
-
-            Files.DirectoryRename(sourceDirFullName, destDirOnlyName);
-        }
-
         public static void DirectoryMove(string sourceDirName, string destDirName)
         {
             DebugWrite.Line($"{sourceDirName} > {destDirName}");
@@ -34,6 +27,27 @@ namespace P3tr0viCh.AppUpdate
             DebugWrite.Line($"{path}");
 
             Files.DirectoryDelete(path);
+        }
+
+        public static void FileCopy(string sourceFileName, string destFileName)
+        {
+            DebugWrite.Line($"{sourceFileName} > {destFileName}");
+
+            File.Copy(sourceFileName, destFileName);
+        }
+
+        public static void FileReplace(string sourceFileName, string destFileName, string destBackupFileName)
+        {
+            DebugWrite.Line($"{sourceFileName} > {destFileName} > {destBackupFileName}");
+
+            File.Replace(sourceFileName, destFileName, destBackupFileName);
+        }
+
+        public static void FileMove(string sourceFileName, string destFileName)
+        {
+            DebugWrite.Line($"{sourceFileName} > {destFileName}");
+
+            File.Move(sourceFileName, destFileName);
         }
 
         public static string GetProgramRoot(string fileName)
@@ -70,46 +84,54 @@ namespace P3tr0viCh.AppUpdate
             return downloadDir;
         }
 
-        public static string GetMoveDir(string downloadDir, string fileNameOnly)
+        public static Version GetVersion(string version)
         {
-            DebugWrite.Line($"DownloadDir: {downloadDir}"); 
-            
-            var moveDir = downloadDir;
+            var tempVersion = new Version(version);
 
-            if (File.Exists(Path.Combine(downloadDir, fileNameOnly)))
-            {
-                DebugWrite.Line($"MoveDir: {moveDir}");
-
-                return moveDir;
-            }
-
-            foreach (var directory in Directory.EnumerateDirectories(downloadDir))
-            {
-                if (File.Exists(Path.Combine(directory, fileNameOnly)))
-                {
-                    return directory;
-                }
-
-                break;
-            }
-
-            throw new FileNotExistsInArchiveException();
+            return new Version(tempVersion.Major, tempVersion.Minor,
+                tempVersion.Build == -1 ? 0 : tempVersion.Build,
+                tempVersion.Revision == -1 ? 0 : tempVersion.Revision);
         }
 
-        public static string GetVersionDir(string programRoot, string moveDir, string fileNameOnly)
+        private static string GetUnixTime()
         {
-            var version = Misc.GetFileVersion(Path.Combine(moveDir, fileNameOnly));
+            return DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+        }
 
-            var versionName = version.ToString();
+        public static string GetFileName(string fileName, string defaultFileName)
+        {
+            return fileName.IsEmpty() ? defaultFileName : fileName;
+        }
 
-            var versionDir = Path.Combine(programRoot, versionName);
+        public static string GetMoveDir(string programRoot, string sourceDirName)
+        {
+            var result = Path.Combine(programRoot, Path.GetFileName(sourceDirName));
 
-            if (Directory.Exists(versionDir))
+            if (Directory.Exists(result))
             {
-                versionDir += "_" + DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+                result += "_" + GetUnixTime();
             }
 
-            return versionDir;
+            return result;
+        }
+
+        public static string GetFileNameBackup(string fileName, Version fileVersion)
+        {
+            var fileWithoutExt = Path.Combine(Path.GetDirectoryName(fileName),
+                Path.GetFileNameWithoutExtension(fileName));
+
+            var ext = Path.GetExtension(fileName);
+
+            fileWithoutExt += "_" + fileVersion.ToString();
+
+            var result = fileWithoutExt + ext;
+
+            if (File.Exists(result))
+            {
+                result = fileWithoutExt + "_" + GetUnixTime() + ext;
+            }
+
+            return result;
         }
     }
 }

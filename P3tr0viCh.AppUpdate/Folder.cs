@@ -1,7 +1,6 @@
 ﻿using P3tr0viCh.Utils;
 using System;
 using System.IO;
-using System.IO.Compression;
 using System.Threading.Tasks;
 
 namespace P3tr0viCh.AppUpdate
@@ -22,9 +21,11 @@ namespace P3tr0viCh.AppUpdate
 
         public async Task<Version> GetLatestVersionAsync()
         {
-            var versionFile = config.VersionFile;
+            var versionFile = Utils.GetFileName(config.VersionFile, AppUpdate.DefaultVersionFile);
 
-            if (versionFile.IsEmpty()) versionFile = AppUpdate.DefaultVersionFile;
+            versionFile = Path.Combine(config.Path, versionFile);
+            
+            DebugWrite.Line($"{versionFile}");
 
             return await Task.Run(() =>
             {
@@ -32,7 +33,25 @@ namespace P3tr0viCh.AppUpdate
 
                 var versionStr = File.ReadAllText(versionFile);
 
-                return new Version(versionStr);
+                return Utils.GetVersion(versionStr);
+            });
+        }
+
+        public async Task DownloadAsync(string downloadDir)
+        {
+            var fileName = Utils.GetFileName(config.ArchiveFile, AppUpdate.DefaultArchiveFile);
+
+            var latestFileName = Path.Combine(config.Path, fileName);
+
+            var downloadFileName = Path.Combine(downloadDir, fileName);
+
+            DebugWrite.Line($"{latestFileName} > {downloadFileName}");
+
+            await Task.Run(() =>
+            {
+                if (!File.Exists(latestFileName)) throw new LatestFileNotFoundException();
+
+                Utils.FileCopy(latestFileName, downloadFileName);
             });
         }
     }

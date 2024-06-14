@@ -9,9 +9,11 @@ namespace P3tr0viCh.AppUpdate
 
     public class LocalFileWrongLocationException : FileNotFoundException { }
 
-    public class FileNotExistsInArchiveException : FileNotFoundException { }
-
     public class GitHubEmptyTagsException : Exception { }
 
     public class VersionFileNotFoundException : FileNotFoundException { }
+
+    public class LatestFileNotFoundException : FileNotFoundException { }
+
+    public class ArchiveBadFormatException : FileNotFoundException { }
 }

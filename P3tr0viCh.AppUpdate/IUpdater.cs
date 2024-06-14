@@ -8,5 +8,7 @@ namespace P3tr0viCh.AppUpdate
         Uri GetLatestRelease();
 
         Task<Version> GetLatestVersionAsync();
+
+        Task DownloadAsync(string downloadDir);
     }
 }

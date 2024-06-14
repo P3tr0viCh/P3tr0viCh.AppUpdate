@@ -73,20 +73,18 @@ namespace P3tr0viCh.AppUpdate
         {
             var latestTag = await GetLatestVersionTagAsync();
 
-            var tempVersion = new Version(latestTag);
-
-            return new Version(tempVersion.Major, tempVersion.Minor,
-                tempVersion.Build == -1 ? 0 : tempVersion.Build,
-                tempVersion.Revision == -1 ? 0 : tempVersion.Revision);
+            return Utils.GetVersion(latestTag);
         }
 
-        internal async Task DownloadAsync(string version, string downloadFileName)
+        public async Task DownloadAsync(string downloadDir)
         {
-            var fileName = config.ArchiveFile;
+            var latestTag = await GetLatestVersionTagAsync();
 
-            if (fileName.IsEmpty()) fileName = AppUpdate.DefaultArchiveFile;
+            var fileName = Utils.GetFileName(config.ArchiveFile, AppUpdate.DefaultArchiveFile);
 
-            var downloadUri = string.Format(UrlDownloadFile, config.Owner, config.Repo, version, fileName);
+            var downloadUri = string.Format(UrlDownloadFile, config.Owner, config.Repo, latestTag, fileName);
+
+            var downloadFileName = Path.Combine(downloadDir, fileName);
 
             DebugWrite.Line($"{downloadUri} > {downloadFileName}");
 

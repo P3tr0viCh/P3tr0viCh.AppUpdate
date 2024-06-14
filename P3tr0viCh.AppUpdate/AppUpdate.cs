@@ -1,5 +1,6 @@
 ﻿using P3tr0viCh.Utils;
 using System;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -11,7 +12,7 @@ namespace P3tr0viCh.AppUpdate
         public const string ParentDirNamePattern = @"\d+\.\d+\.\d+\.\d+";
 
         public const string DefaultArchiveFile = "latest.zip";
-        
+
         public const string DefaultVersionFile = "version";
 
         public ProgramStatus Status { get; } = new ProgramStatus();
@@ -138,6 +139,19 @@ namespace P3tr0viCh.AppUpdate
             DebugWrite.Line("done");
         }
 
+        private string GetArchiveFile()
+        {
+            switch (Config.Location)
+            {
+                case Location.GitHub:
+                    return Config.GitHub.ArchiveFile;
+                case Location.Folder:
+                    return Config.Folder.ArchiveFile;
+                default:
+                    throw new ArgumentException();
+            }
+        }
+
         public async Task UpdateAsync()
         {
             DebugWrite.Line("start");
@@ -152,19 +166,70 @@ namespace P3tr0viCh.AppUpdate
 
                 var downloadDir = Utils.GetDownloadDir(programRoot);
 
-                var archiveFileName = Path.Combine(downloadDir, Config.GitHub.ArchiveFile);
+                var archiveFile = GetArchiveFile();
 
-                await ArchiveExtractAsync(archiveFileName, downloadDir);
+                var archiveFilePath = Path.Combine(downloadDir, archiveFile);
 
-                File.Delete(archiveFileName);
+                await ArchiveExtractAsync(archiveFilePath, downloadDir);
+
+                File.Delete(archiveFilePath);
+
+
+                /* %PROGRAM_NAME_DIR%
+                 * |- %PROGRAM_NAME%.exe (starter)
+                 * |- %VERSION_DIR%
+                 *    |- %PROGRAM_NAME%.exe
+                 *    |- *.dll
+                 *    |- other dirs&files
+                 */
+
+                // %PROGRAM_NAME_DIR%
+                var dirs = Directory.GetDirectories(downloadDir);
+
+                if (dirs.Length != 1) throw new ArchiveBadFormatException();
+
+                var latestProgramRoot = dirs[0];
+
+                // %VERSION_DIR%
+                dirs = Directory.GetDirectories(latestProgramRoot);
+
+                if (dirs.Length != 1) throw new ArchiveBadFormatException();
+
+                var latestDir = dirs[0];
 
                 var fileNameOnly = Path.GetFileName(Config.LocalFile);
 
-                var moveDir = Utils.GetMoveDir(downloadDir, fileNameOnly);
+                // %PROGRAM_NAME%.exe (starter)
+                var latestStarter = Path.Combine(latestProgramRoot, fileNameOnly);
 
-                var versionDir = Utils.GetVersionDir(programRoot, moveDir, fileNameOnly);
+                if (!File.Exists(latestStarter)) throw new ArchiveBadFormatException();
 
-                Utils.DirectoryMove(moveDir, versionDir);
+                // %PROGRAM_NAME%.exe
+                var latestFilePath = Path.Combine(latestDir, fileNameOnly);
+
+                if (!File.Exists(latestFilePath)) throw new ArchiveBadFormatException();
+
+                var currentStarter = Path.Combine(programRoot, fileNameOnly);
+
+                if (File.Exists(currentStarter))
+                {
+                    var currentStarterVersion = Misc.GetFileVersion(currentStarter);
+
+                    if (Misc.GetFileVersion(latestStarter).CompareTo(currentStarterVersion) > 0)
+                    {
+                        var currentStarterBackup = Utils.GetFileNameBackup(currentStarter, currentStarterVersion);
+
+                        Utils.FileReplace(latestStarter, currentStarter, currentStarterBackup);
+                    }
+                }
+                else
+                {
+                    Utils.FileMove(latestStarter, currentStarter);
+                }
+
+                var destDirName = Utils.GetMoveDir(programRoot, latestDir);
+
+                Utils.DirectoryMove(latestDir, destDirName);
 
                 Utils.DirectoryDelete(downloadDir);
             }
@@ -190,11 +255,9 @@ namespace P3tr0viCh.AppUpdate
 
                 var downloadDir = Utils.CreateDownloadDir(programRoot);
 
-                var archiveFileName = Path.Combine(downloadDir, Config.GitHub.ArchiveFile);
+                var updater = UpdaterFactory.GetUpdater(Config);
 
-                var gitHub = new GitHub(Config.GitHub);
-
-                await gitHub.DownloadAsync(Versions.latestStr, archiveFileName);
+                await updater.DownloadAsync(downloadDir);
             }
             finally
             {
