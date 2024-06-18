@@ -1,6 +1,5 @@
 ﻿using P3tr0viCh.Utils;
 using System;
-using System.Drawing.Drawing2D;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
