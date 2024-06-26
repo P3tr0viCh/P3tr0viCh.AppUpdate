@@ -14,6 +14,11 @@ namespace P3tr0viCh.AppUpdate
         [Editor(typeof(FileNameEditor), typeof(UITypeEditor))]
         public string LocalFile { get; set; }
 
+        [LocalizedAttribute.Category("Category.Common", "Properties.Resources.AppUpdate")]
+        [LocalizedAttribute.DisplayName("Config.CopySettings.DisplayName", "Properties.Resources.AppUpdate")]
+        [LocalizedAttribute.Description("Config.CopySettings.Description", "Properties.Resources.AppUpdate")]
+        public bool CopySettings { get; set; } = true;
+
         [LocalizedAttribute.Category("Category.UpdateLocation", "Properties.Resources.AppUpdate")]
         [LocalizedAttribute.DisplayName("Config.Location.DisplayName", "Properties.Resources.AppUpdate")]
         [LocalizedAttribute.Description("Config.Location.Description", "Properties.Resources.AppUpdate")]

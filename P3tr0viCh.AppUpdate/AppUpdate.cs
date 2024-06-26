@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace P3tr0viCh.AppUpdate
 {
-    public class AppUpdate
+    public partial class AppUpdate
     {
         public const string ParentDirNamePattern = @"\d+\.\d+\.\d+\.\d+";
 
@@ -19,6 +19,8 @@ namespace P3tr0viCh.AppUpdate
         public Versions Versions { get; } = new Versions();
 
         public Config Config { get; set; } = new Config();
+
+        public event AfterUpdateEventHandler AfterUpdate;
 
         public Uri GetLatestRelease()
         {
@@ -161,6 +163,8 @@ namespace P3tr0viCh.AppUpdate
             {
                 await DownloadAsync();
 
+                var currentDir = Utils.GetCurrentDir(Config.LocalFile);
+
                 var programRoot = Utils.GetProgramRoot(Config.LocalFile);
 
                 var downloadDir = Utils.GetDownloadDir(programRoot);
@@ -172,7 +176,6 @@ namespace P3tr0viCh.AppUpdate
                 await ArchiveExtractAsync(archiveFilePath, downloadDir);
 
                 File.Delete(archiveFilePath);
-
 
                 /* %PROGRAM_NAME_DIR%
                  * |- %PROGRAM_NAME%.exe (starter)
@@ -230,7 +233,11 @@ namespace P3tr0viCh.AppUpdate
 
                 Utils.DirectoryMove(latestDir, destDirName);
 
+                latestDir = destDirName;
+
                 Utils.DirectoryDelete(downloadDir);
+
+                AfterUpdateEvent(new AfterUpdateEventArgs(currentDir, latestDir));
             }
             finally
             {
@@ -264,6 +271,23 @@ namespace P3tr0viCh.AppUpdate
             }
 
             DebugWrite.Line("done");
+        }
+
+        internal void AfterUpdateEvent(AfterUpdateEventArgs args)
+        {
+            if (Config.CopySettings)
+            {
+                var settingsFileName = Files.SettingsFileName(Config.LocalFile);
+
+                var currentSettingsFilePath = Path.Combine(args.CurrentDir, settingsFileName);
+
+                if (File.Exists(currentSettingsFilePath))
+                {
+                    Utils.FileCopy(currentSettingsFilePath, Path.Combine(args.LatestDir, settingsFileName));
+                }
+            }
+
+            AfterUpdate?.Invoke(this, args);
         }
     }
 }

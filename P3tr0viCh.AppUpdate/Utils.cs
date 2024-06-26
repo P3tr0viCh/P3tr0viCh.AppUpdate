@@ -50,6 +50,15 @@ namespace P3tr0viCh.AppUpdate
             File.Move(sourceFileName, destFileName);
         }
 
+        public static string GetCurrentDir(string fileName)
+        {
+            var currentDir = Path.GetDirectoryName(fileName);
+
+            DebugWrite.Line($"CurrentDir: {currentDir}");
+
+            return currentDir;
+        }
+
         public static string GetProgramRoot(string fileName)
         {
             var programRoot = Path.GetDirectoryName(Path.GetDirectoryName(fileName));
