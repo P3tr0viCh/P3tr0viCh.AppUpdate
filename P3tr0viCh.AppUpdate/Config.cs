@@ -27,13 +27,13 @@ namespace P3tr0viCh.AppUpdate
         [LocalizedAttribute.Category("Category.UpdateLocation", "Properties.Resources.AppUpdate")]
         [LocalizedAttribute.DisplayName("Config.GitHub.DisplayName", "Properties.Resources.AppUpdate")]
         [LocalizedAttribute.Description("Config.GitHub.Description", "Properties.Resources.AppUpdate")]
-        [TypeConverter(typeof(ExpandableObjectEmptyConverter))]
+        [TypeConverter(typeof(PropertySortedConverter))]
         public GitHub.Config GitHub { get; set; } = new GitHub.Config();
 
         [LocalizedAttribute.Category("Category.UpdateLocation", "Properties.Resources.AppUpdate")]
         [LocalizedAttribute.DisplayName("Config.Folder.DisplayName", "Properties.Resources.AppUpdate")]
         [LocalizedAttribute.Description("Config.Folder.Description", "Properties.Resources.AppUpdate")]
-        [TypeConverter(typeof(ExpandableObjectEmptyConverter))]
+        [TypeConverter(typeof(PropertySortedConverter))]
         public Folder.Config Folder { get; set; } = new Folder.Config();
     }
 }

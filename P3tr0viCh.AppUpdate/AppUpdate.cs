@@ -145,9 +145,9 @@ namespace P3tr0viCh.AppUpdate
             switch (Config.Location)
             {
                 case Location.GitHub:
-                    return Config.GitHub.ArchiveFile;
+                    return Utils.GetFileName(Config.GitHub.ArchiveFile, DefaultArchiveFile);
                 case Location.Folder:
-                    return Config.Folder.ArchiveFile;
+                    return Utils.GetFileName(Config.Folder.ArchiveFile, DefaultArchiveFile);
                 default:
                     throw new ArgumentException();
             }

@@ -8,7 +8,7 @@ namespace P3tr0viCh.AppUpdate
     {
         public static async Task ZipExtractAsync(string archiveFileName, string destinationDir)
         {
-            DebugWrite.Line($"{archiveFileName} > {destinationDir}");
+            DebugWrite.Line($"archive {archiveFileName} extract to {destinationDir}");
 
             try
             {
