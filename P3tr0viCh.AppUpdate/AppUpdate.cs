@@ -14,11 +14,12 @@ namespace P3tr0viCh.AppUpdate
 
         public const string DefaultVersionFile = "version";
 
-        public ProgramStatus Status => new ProgramStatus();
+        public ProgramStatus Status { get; } = new ProgramStatus();
 
-        public Versions Versions => new Versions();
+        public Versions Versions { get; } = new Versions();
 
         public Config Config { get; set; } = new Config();
+
 
         public event AfterUpdateEventHandler AfterUpdate;
 
@@ -82,7 +83,7 @@ namespace P3tr0viCh.AppUpdate
             {
                 Versions.Local = Files.GetFileVersion(Config.LocalFile);
 
-                DebugWrite.Line(Versions.Local.ToString());
+                DebugWrite.Line(Versions.Local?.ToString());
             }
             catch (Exception e)
             {
@@ -112,7 +113,7 @@ namespace P3tr0viCh.AppUpdate
 
                 Versions.Latest = await updater.GetLatestVersionAsync();
 
-                DebugWrite.Line(Versions.Latest.ToString());
+                DebugWrite.Line(Versions.Latest?.ToString());
             }
             finally
             {
