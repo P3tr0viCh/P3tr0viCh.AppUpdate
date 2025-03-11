@@ -14,9 +14,9 @@ namespace P3tr0viCh.AppUpdate
 
         public const string DefaultVersionFile = "version";
 
-        public ProgramStatus Status { get; } = new ProgramStatus();
+        public ProgramStatus Status => new ProgramStatus();
 
-        public Versions Versions { get; } = new Versions();
+        public Versions Versions => new Versions();
 
         public Config Config { get; set; } = new Config();
 
@@ -80,7 +80,7 @@ namespace P3tr0viCh.AppUpdate
 
             try
             {
-                Versions.Local = Misc.GetFileVersion(Config.LocalFile);
+                Versions.Local = Files.GetFileVersion(Config.LocalFile);
 
                 DebugWrite.Line(Versions.Local.ToString());
             }
@@ -215,9 +215,9 @@ namespace P3tr0viCh.AppUpdate
 
                 if (File.Exists(currentStarter))
                 {
-                    var currentStarterVersion = Misc.GetFileVersion(currentStarter);
+                    var currentStarterVersion = Files.GetFileVersion(currentStarter);
 
-                    if (Misc.GetFileVersion(latestStarter).CompareTo(currentStarterVersion) > 0)
+                    if (Files.GetFileVersion(latestStarter).CompareTo(currentStarterVersion) > 0)
                     {
                         var currentStarterBackup = Utils.GetFileNameBackup(currentStarter, currentStarterVersion);
 

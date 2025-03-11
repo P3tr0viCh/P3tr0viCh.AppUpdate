@@ -2,7 +2,6 @@
 using System.ComponentModel;
 using System.Drawing.Design;
 using System.Windows.Forms.Design;
-using static P3tr0viCh.Utils.Converters;
 
 namespace P3tr0viCh.AppUpdate
 {

@@ -8,14 +8,8 @@ namespace P3tr0viCh.AppUpdate
 
         public Version Latest { get; internal set; } = null;
 
-        public int Compare()
-        {
-            return Latest.CompareTo(Local);
-        }
+        public int Compare() => Latest.CompareTo(Local);
 
-        public bool IsLatest()
-        {
-            return Compare() != 1;
-        }
+        public bool IsLatest() => Compare() != 1;
     }
 }
